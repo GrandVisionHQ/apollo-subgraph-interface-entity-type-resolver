@@ -1,56 +1,82 @@
 import { gql } from 'graphql-tag';
-import { run, sleep } from './common';
+import { run } from './common';
 
 // The GraphQL schema
 const typeDefs = gql`
   extend schema @link(url: "https://specs.apollo.dev/federation/v2.8", import: ["@key"])
 
-  interface Product @key(fields: "resolveInMs") {
-    resolveInMs: Int!
+  enum ProductType {
+    SUNGLASS
+    FRAME
+  }
+
+  interface Product @key(fields: "slug") {
+    type: ProductType!
+    slug: String!
+  }
+
+  type SunglassProduct implements Product @key(fields: "slug") {
+    type: ProductType!
+    slug: String!
     brand: String!
   }
 
-  type SunglassProduct implements Product @key(fields: "resolveInMs") {
-    resolveInMs: Int!
-    brand: String!
-  }
-
-  type SunglassVariant @key(fields: "sku") {
-    sku: String!
+  type FrameProduct implements Product @key(fields: "slug") {
+    type: ProductType!
+    slug: String!
     color: String!
-    inventory: Inventory!
-  }
-
-  type Inventory @key(fields: "sku", resolvable: false) {
-    sku: String!
   }
 `;
 
 // A map of functions which return data for the schema.
 const resolvers = {
   Product: {
-    __resolveReference: async ({ resolveInMs }: { resolveInMs: number }) => {
-      await sleep(resolveInMs);
+    __resolveReference: async ({ slug }: { slug: string }) => {
+      if (slug === 'sunglass') {
+        return {
+          type: 'SUNGLASS',
+          slug,
+          brand: 'RayBan',
+        };
+      } else if (slug === 'frame') {
+        return {
+          type: 'FRAME',
+          slug,
+          color: 'Green',
+        };
+      } else {
+        return null;
+      }
+    },
+    __resolveType: async (entity: { type: 'SUNGLASS' | 'FRAME' }) => {
+      switch (entity.type) {
+        case 'SUNGLASS':
+          return 'SunglassProduct';
+        case 'FRAME':
+          return 'FrameProduct';
+        default:
+          throw new Error('Unknown type');
+      }
+    },
+  },
+  SunglassProduct: {
+    __resolveReference: async ({ slug }: { slug: string }) => {
       return {
-        __typename: 'SunglassProduct',
-        resolveInMs,
+        type: 'SUNGLASS',
+        slug,
         brand: 'RayBan',
       };
     },
   },
-  SunglassVariant: {
-    __resolveReference: async ({ sku }: { sku: string }) => {
-      await sleep(3);
+  FrameProduct: {
+    __resolveReference: async ({ slug }: { slug: string }) => {
       return {
-        __typename: 'SunglassVariant',
-        sku,
-        color: 'green',
-        inventory: {
-          sku,
-        },
+        type: 'FRAME',
+        slug,
+        color: 'Green',
       };
     },
   },
 };
 
-export const runA = () => run(typeDefs, resolvers, 3001, 'SubgraphA');
+export const runA = () => run(typeDefs, resolvers, 4000, 'SubgraphA');

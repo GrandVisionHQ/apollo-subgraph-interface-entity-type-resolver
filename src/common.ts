@@ -6,9 +6,6 @@ import { DocumentNode, print } from 'graphql';
 import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 import { loggerPlugin } from './logger';
 
-export const isDefined = <T>(arg?: null | T) => arg !== undefined && arg !== null;
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const run = async (
   typeDefs: DocumentNode | DocumentNode[],
   resolvers: GraphQLResolverMap<unknown>,
